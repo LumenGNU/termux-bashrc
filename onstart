@@ -1,0 +1,7 @@
+
+# OPTIONS
+shopt -s checkwinsize; (:;:)
+
+# -запуск ssh-агента и добавление ключей
+eval "$(ssh-agent -s)" > /dev/null
+ssh-add "/data/data/com.termux/files/home/.ssh/github.rsa" &> /dev/null

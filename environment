@@ -1,0 +1,5 @@
+
+PATH="/data/data/com.termux/files/home/bin:$PATH"
+export PATH
+
+export USER="$(whoami)"

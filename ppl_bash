@@ -1,0 +1,217 @@
+
+##
+## Зависимости:
+## termux-set-title
+##
+## SECONDS -- системная переменная. man bash /SECONDS
+## используется для фиксации времени выполнения команд
+
+# избавляемся от ошибок если termux-set-title не установлен
+type termux-set-title &>/dev/null || alias termux-set-title=':'
+
+
+# хранит кода завершений последней цепочки команд
+declare -a LAST_PIPESTATUS=()
+
+# счотчик команд
+declare -i ppl_COMAND_COUNTER=0
+
+
+# поменять заголовок вкладки
+#termux-set-title "[${USER}@${HOSTNAME}]"
+
+
+function ppl_print_status_line {
+    local -ri seconds=${1:-0}
+    local -r mark=${2:+" $2"}
+    local -ar statuses=("${@:3}")
+    local timestamp=''
+    local status_line=' '
+    local fill_length
+    local fill=''
+
+    # Создать временную метку, если SECONDS > 5
+    if (($seconds > 5 )); then
+        printf -v timestamp ' [%02d:%02d:%02d] ' $(($seconds/3600)) $((($seconds%3600)/60)) $(($seconds%60))
+    fi
+
+    local -i status_length=1
+    # Формирование строки статусов
+    for status in "${statuses[@]}"; do
+        local color=$'\e[32m' # Зеленый для 0
+        (( status > 0 )) && color=$'\e[31m' # Красный для ненулевых
+        printf -v status_line '%s%s%s ' "$status_line" "$color" "$status"
+        ((status_length += ${#status} + 1))
+    done
+    status_line+=$'\e[0m' # Сброс цвета
+
+    # Рассчитать длину заполнения
+    fill_length=$(( $(tput cols) - ${#timestamp} - ${status_length} - ${#mark} - 4))
+
+    # Создать заполнение
+    [[ $fill_length -gt 0 ]] && printf -v fill '%*s' "$fill_length"
+
+    # Вывести итоговую строку статуса
+    printf -- "\n--%s%s%s%s--\n\n\n" "$timestamp" "${fill// /-}" "$mark" "$status_line"
+}
+
+# Вызываетя перед выполнением каждой комманды в списке/цепочке
+# комманд введенных в ком. строку.
+# note: После выполнения всех введенных комманд всегда будут
+# выполнены ещё две команды:
+# - trap 'ppl_cb_precommand' DEBUG
+# - ppl_cb_postcommand
+#
+# Перед выполнением "trap 'ppl_cb_precommand' DEBUG", т.е.
+# после выполнения всех команд из цепочки викомандной строке,
+# глобальная переменная LAST_PIPESTATUS будет содержать 
+# кода завершения команд из цепочки команд в ком. строке.
+#
+# TODO: какое поведение для пустой команды (<enter> в пустой
+# строке, или C-c)? Какое поведение для C-z?
+function ppl_cb_precommand {
+  
+  # сохранить коды завершений выполненых команд в локальную
+  # переменную
+  local -ar _LAST_PIPESTATUS=("${PIPESTATUS[@]}") # всегда первой строкой в pll_cb_precommand
+
+  trap - DEBUG # @todo: может и не нада, но и не мешает
+
+  [[ "${BASH_COMMAND}" == "trap 'ppl_cb_precommand' DEBUG" ]] && {
+    # все команды выполнены
+    # скопировать кода завершения команд в глобальную
+    # переменную
+    LAST_PIPESTATUS=("${_LAST_PIPESTATUS[@]}") #запомнить кооды завершений
+    # и больше ничего не делать
+    return
+  }
+
+  # игнорировать, ничего не делать
+  [[ "${BASH_COMMAND}" == "ppl_cb_postcommand" ]] && return
+  
+  # @todo: (для termux не актуально?) if BASH_COMMAND == sudo после нарисовать еще один бордер
+
+  # поменять заголовок окна на текущую команду
+  termux-set-title "[${USER}@${HOSTNAME}]> ${BASH_COMMAND}"
+
+  # обнулить счетчик времени перед выполнением первой команды
+  # из цепочки команд из ком. строки
+  ((ppl_COMAND_COUNTER == 0)) && SECONDS=0
+
+  # подсчет команд
+  ((++ppl_COMAND_COUNTER))
+}
+
+
+# Выполняется после выполнения всех команд в списке/цепочке
+# комманд введенных в ком. строку.
+# Использует глобальные переменные: LAST_PIPESTATUS
+#                                   ppl_COMAND_COUNTER
+function ppl_cb_postcommand {
+
+  # сбросить заголовок вкладки
+  termux-set-title "[${USER}@${HOSTNAME}]"
+
+  if ((ppl_COMAND_COUNTER > 0)); then
+
+    # PIPESTATUS - содержит коды завершения только последнего конвеера,
+    # если выполнено несколько конвееро проинформировать пользователя
+    # Если вы используете операторы для соединения нескольких команд в
+    # одной строке, ppl_COMAND_COUNTER будет увеличиваться на каждую 
+    # команду, но LAST_PIPESTATUS будет содержать статусы только
+    # последней выполненной цепочки команд. Например, 
+    # command1; command2 увеличит счетчик на два, 
+    # но LAST_PIPESTATUS будет содержать статусы только для 
+    # command2. В такой и подобно ситуации перед кодами завершения
+    # будет вставлен маркер, показывающий что часть кодов пропущена.
+    local _mark=''
+    ((ppl_COMAND_COUNTER > ${#LAST_PIPESTATUS[@]})) &&  _mark='…'
+
+    # shellcheck disable=SC2086,SC2048
+    ppl_print_status_line "${SECONDS}" "${_mark}" "${LAST_PIPESTATUS[@]}" #< вывод строки-статуса
+    #LAST_PIPESTATUS=('')
+
+    ppl_COMAND_COUNTER=0 # сбросить счетчик комманд
+  else
+    # @todo:
+    # если нет команды (ентер в пустой строке|C-c)
+    # @fixme: некрасиво получается
+    # printf '\e[2A'
+    # #< перед рисованием строки-приглашения сдвинутся вверх 2строки
+    # printf '\e[0J'
+    :
+  fi
+}
+
+function ppl_print_precommand {
+
+  # линия разделитель между командой и ее выводом
+  printf -v fill '%*s' $(tput cols)
+  printf '%s\n\n' "${fill// /-}"
+  printf '\E[J' #< очистить экран от курсора до конца
+}
+
+function get_absolute_path {
+    # Используем подоболочку для получения абсолютного пути
+    # Изменения рабочего каталога в подоболочке не повлияют на родительскую оболочку
+    printf '%s' "$(cd "${1}" &>/dev/null && pwd)"
+}
+
+function path_ellipsize {
+   # local path=$1
+    local home=$HOME
+    local git_root
+    
+    local term_width
+    local path_length
+    local max_length=$(tput col)
+
+    # Получаем абсолютный путь
+    local -r abspath="$(printf '%s' $(cd ${1} &>/dev/null && pwd))"
+
+    # Проверяем, является ли путь частью домашней директории
+    if [[ $abspath == $HOME* ]]; then
+        # Заменяем $HOME на ~
+        elip_path=".../~${abspath#$HOME}"
+    fi
+    
+    
+        # Проверяем, является ли путь частью Git-репозитория
+        git_root="$(git -C "${abspath}" rev-parse --show-toplevel 2>/dev/null)"
+        if [[ -n $git_root ]]; then
+            # Заменяем часть пути до корневой директории репозитория на '...'
+            elip_path="${abspath/#$git_root/.../$(basename $git_root)}"
+        fi
+    
+    
+    path_length=${#elip_path}
+        # Если путь длиннее максимально допустимой длины, сокращаем его
+    if ((path_length > max_length)); then
+        local part_length=$(( (max_length - 3) / 2 )) # Длина каждой части пути до и после эллипсиса
+        local start=${abspath:0:part_length}
+        local end=${abspath: -part_length}
+        elip_path="${start}...${end}"
+    fi
+
+    printf '%s' "$elip_path"
+}
+
+
+    # Определяем максимальную длину пути как 75% ширины терминала
+    term_width=$(tput cols)
+    max_length=$((term_width * 3 / 4))
+
+    # Получаем длину пути
+    path_length=${#abspath}
+
+
+
+
+function ppl_print_prompt {
+  path_ellipsize "$(pwd)"
+  printf '\n%s' '$> '
+}
+
+PROMPT_COMMAND="trap 'ppl_cb_precommand' DEBUG; ppl_cb_postcommand"
+PS0='$(ppl_print_precommand)'
+PS1='$(ppl_print_prompt)'
