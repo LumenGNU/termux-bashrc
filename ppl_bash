@@ -145,10 +145,10 @@ function ppl_cb_postcommand {
 
 function ppl_print_precommand {
 
+  tput sgr0
   # линия разделитель между командой и ее выводом
   printf -v fill '%*s' $(tput cols)
   printf '%s\n\n' "${fill// /-}"
-  printf '\E[J' #< очистить экран от курсора до конца
 }
 
 function get_absolute_path {
@@ -157,59 +157,76 @@ function get_absolute_path {
     printf '%s' "$(cd "${1}" &>/dev/null && pwd)"
 }
 
-function path_ellipsize {
-   # local path=$1
-    local home=$HOME
-    local git_root
+function ppl_path_abbreviation {
+    # укорачивает путь преданый в $1 до количества
+    # символов переданого в $2
+    # Логика работы: @todo
     
-    local term_width
-    local path_length
-    local max_length=$(tput col)
+    local short_path
 
     # Получаем абсолютный путь
-    local -r abspath="$(printf '%s' $(cd ${1} &>/dev/null && pwd))"
+    local -r abs_path="$(cd ${1} &>/dev/null && pwd)"
 
-    # Проверяем, является ли путь частью домашней директории
-    if [[ $abspath == $HOME* ]]; then
-        # Заменяем $HOME на ~
-        elip_path=".../~${abspath#$HOME}"
-    fi
+
+    # 1)
+    # Проверяем, является ли путь частью Git-репозитория
+    local -r git_root="$(git -C "${abs_path}" rev-parse --show-toplevel 2>/dev/null)"
+    if [[ -n $git_root ]]; then
+        # Заменяем часть пути до корневой директории репозитория на '...'
+        short_path="${abs_path/#$git_root/(git)/$(basename $git_root)}"
+   
+    else
     
-    
-        # Проверяем, является ли путь частью Git-репозитория
-        git_root="$(git -C "${abspath}" rev-parse --show-toplevel 2>/dev/null)"
-        if [[ -n $git_root ]]; then
-            # Заменяем часть пути до корневой директории репозитория на '...'
-            elip_path="${abspath/#$git_root/.../$(basename $git_root)}"
+      # 2)
+      # если путь одна из подпапок в директории $HOME/storage/external-*
+      if [[ $abs_path == $HOME/storage/external-* || $abs_path == $HOME/storage/shared ]]; then
+           # Заменяем $HOME/storage на ...
+          short_path="...${abs_path#$HOME/storage}"
+        
+      else
+      
+        # 3)
+        # если путь одна из подпапок в директории $HOME/storage
+        if [[ $abs_path == $HOME/storage/* ]]; then
+             # Заменяем $HOME на ...
+            short_path="...${abs_path#$HOME}"
+        
+        else
+        
+          # 4)
+          # Проверяем, является ли путь частью домашней директории
+          if [[ $abs_path == $HOME/* ]]; then
+              # Заменяем $HOME на .../home
+              short_path=".../home${abs_path#$HOME}"
+        
+          else
+              short_path="$1"
+          fi
         fi
+      fi
+    fi
     
-    
-    path_length=${#elip_path}
-        # Если путь длиннее максимально допустимой длины, сокращаем его
-    if ((path_length > max_length)); then
-        local part_length=$(( (max_length - 3) / 2 )) # Длина каждой части пути до и после эллипсиса
-        local start=${abspath:0:part_length}
-        local end=${abspath: -part_length}
-        elip_path="${start}...${end}"
+    # 5)
+    local -r path_length=${#short_path}
+    # Если путь длиннее максимально допустимой длины, сокращаем его
+    if ((path_length > $2)); then
+        local -r part_length=$(( ($2 - 3) / 2 )) # Длина каждой части пути до и после эллипсиса
+        local -r start=${short_path:0:part_length}
+        local -r end=${short_path: -part_length}
+        short_path="${start}...${end}"
     fi
 
-    printf '%s' "$elip_path"
+    printf '%s' "$short_path"
 }
 
 
-    # Определяем максимальную длину пути как 75% ширины терминала
-    term_width=$(tput cols)
-    max_length=$((term_width * 3 / 4))
-
-    # Получаем длину пути
-    path_length=${#abspath}
-
-
-
-
+# выводит путь текущей директории приглашение ввода
+# путь будет сокращен и/или обрезан для того чтобы помещатся
+# в одну строку
 function ppl_print_prompt {
-  path_ellipsize "$(pwd)"
-  printf '\n%s' '$> '
+  tput sgr0
+  ppl_path_abbreviation "$(pwd)" $(($(tput col) * 3 / 4))
+  printf '\n%s:%s ' "$USER" '$'
 }
 
 PROMPT_COMMAND="trap 'ppl_cb_precommand' DEBUG; ppl_cb_postcommand"
