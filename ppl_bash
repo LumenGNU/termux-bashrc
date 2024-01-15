@@ -1,7 +1,8 @@
-
+#!/bin/bash
 ##
 ## Зависимости:
 ## termux-set-title
+## tput
 ##
 ## SECONDS -- системная переменная. man bash /SECONDS
 ## используется для фиксации времени выполнения команд
@@ -13,8 +14,8 @@ type termux-set-title &>/dev/null || alias termux-set-title=':'
 # хранит кода завершений последней цепочки команд
 declare -a LAST_PIPESTATUS=()
 
-# счотчик команд
-declare -i ppl_COMAND_COUNTER=0
+# счётчик команд
+declare -i ppl_COMMAND_COUNTER=0
 
 
 # поменять заголовок вкладки
@@ -31,8 +32,8 @@ function ppl_print_status_line {
     local fill=''
 
     # Создать временную метку, если SECONDS > 5
-    if (($seconds > 5 )); then
-        printf -v timestamp ' [%02d:%02d:%02d] ' $(($seconds/3600)) $((($seconds%3600)/60)) $(($seconds%60))
+    if ((seconds > 5 )); then
+        printf -v timestamp ' [%02d:%02d:%02d] ' $((seconds/3600)) $(((seconds%3600)/60)) $((seconds%60))
     fi
 
     local -i status_length=1
@@ -46,48 +47,49 @@ function ppl_print_status_line {
     status_line+=$'\e[0m' # Сброс цвета
 
     # Рассчитать длину заполнения
-    fill_length=$(( $(tput cols) - ${#timestamp} - ${status_length} - ${#mark} - 4))
+    fill_length=$(( $(tput cols) - ${#timestamp} - status_length - ${#mark} - 4))
 
     # Создать заполнение
-    [[ $fill_length -gt 0 ]] && printf -v fill '%*s' "$fill_length"
+    [[ $fill_length -gt 0 ]] && printf -v fill '%*s' "$fill_length" ""
 
     # Вывести итоговую строку статуса
     printf -- "\n--%s%s%s%s--\n\n\n" "$timestamp" "${fill// /-}" "$mark" "$status_line"
 }
 
-# Вызываетя перед выполнением каждой комманды в списке/цепочке
-# комманд введенных в ком. строку.
-# note: После выполнения всех введенных комманд всегда будут
-# выполнены ещё две команды:
-# - trap 'ppl_cb_precommand' DEBUG
-# - ppl_cb_postcommand
+# Вызывается перед выполнением каждой команды в списке/цепочке
+# команд введенных в ком. строку.
 #
-# Перед выполнением "trap 'ppl_cb_precommand' DEBUG", т.е.
-# после выполнения всех команд из цепочки викомандной строке,
+# @note: После выполнения всех введенных команд всегда будут
+# выполнены ещё две команды:
+# - trap 'ppl_cb_pre_command' DEBUG
+# - ppl_cb_post_command
+#
+# Перед выполнением "trap 'ppl_cb_pre_command' DEBUG", т.е.
+# после выполнения всех команд из цепочки в командной строке,
 # глобальная переменная LAST_PIPESTATUS будет содержать 
 # кода завершения команд из цепочки команд в ком. строке.
 #
 # TODO: какое поведение для пустой команды (<enter> в пустой
 # строке, или C-c)? Какое поведение для C-z?
-function ppl_cb_precommand {
+function ppl_cb_pre_command {
   
-  # сохранить коды завершений выполненых команд в локальную
+  # сохранить коды завершений выполненных команд в локальную
   # переменную
-  local -ar _LAST_PIPESTATUS=("${PIPESTATUS[@]}") # всегда первой строкой в pll_cb_precommand
+  local -ar _LAST_PIPESTATUS=("${PIPESTATUS[@]}") # всегда первой строкой в pll_cb_pre_command
 
   trap - DEBUG # @todo: может и не нада, но и не мешает
 
-  [[ "${BASH_COMMAND}" == "trap 'ppl_cb_precommand' DEBUG" ]] && {
+  [[ "${BASH_COMMAND}" == "trap 'ppl_cb_pre_command' DEBUG" ]] && {
     # все команды выполнены
     # скопировать кода завершения команд в глобальную
     # переменную
-    LAST_PIPESTATUS=("${_LAST_PIPESTATUS[@]}") #запомнить кооды завершений
+    LAST_PIPESTATUS=("${_LAST_PIPESTATUS[@]}") #запомнить коды завершений
     # и больше ничего не делать
     return
   }
 
   # игнорировать, ничего не делать
-  [[ "${BASH_COMMAND}" == "ppl_cb_postcommand" ]] && return
+  [[ "${BASH_COMMAND}" == "ppl_cb_post_command" ]] && return
   
   # @todo: (для termux не актуально?) if BASH_COMMAND == sudo после нарисовать еще один бордер
 
@@ -96,28 +98,28 @@ function ppl_cb_precommand {
 
   # обнулить счетчик времени перед выполнением первой команды
   # из цепочки команд из ком. строки
-  ((ppl_COMAND_COUNTER == 0)) && SECONDS=0
+  ((ppl_COMMAND_COUNTER == 0)) && SECONDS=0
 
   # подсчет команд
-  ((++ppl_COMAND_COUNTER))
+  ((++ppl_COMMAND_COUNTER))
 }
 
 
 # Выполняется после выполнения всех команд в списке/цепочке
-# комманд введенных в ком. строку.
+# команд введенных в ком. строку.
 # Использует глобальные переменные: LAST_PIPESTATUS
-#                                   ppl_COMAND_COUNTER
-function ppl_cb_postcommand {
+#                                   ppl_COMMAND_COUNTER
+function ppl_cb_post_command {
 
   # сбросить заголовок вкладки
   termux-set-title "[${USER}@${HOSTNAME}]"
 
-  if ((ppl_COMAND_COUNTER > 0)); then
+  if ((ppl_COMMAND_COUNTER > 0)); then
 
-    # PIPESTATUS - содержит коды завершения только последнего конвеера,
-    # если выполнено несколько конвееро проинформировать пользователя
+    # PIPESTATUS - содержит коды завершения только последнего конвейера,
+    # если выполнено несколько конвейер проинформировать пользователя
     # Если вы используете операторы для соединения нескольких команд в
-    # одной строке, ppl_COMAND_COUNTER будет увеличиваться на каждую 
+    # одной строке, ppl_COMMAND_COUNTER будет увеличиваться на каждую 
     # команду, но LAST_PIPESTATUS будет содержать статусы только
     # последней выполненной цепочки команд. Например, 
     # command1; command2 увеличит счетчик на два, 
@@ -125,16 +127,16 @@ function ppl_cb_postcommand {
     # command2. В такой и подобно ситуации перед кодами завершения
     # будет вставлен маркер, показывающий что часть кодов пропущена.
     local _mark=''
-    ((ppl_COMAND_COUNTER > ${#LAST_PIPESTATUS[@]})) &&  _mark='…'
+    ((ppl_COMMAND_COUNTER > ${#LAST_PIPESTATUS[@]})) &&  _mark='…'
 
     # shellcheck disable=SC2086,SC2048
     ppl_print_status_line "${SECONDS}" "${_mark}" "${LAST_PIPESTATUS[@]}" #< вывод строки-статуса
     #LAST_PIPESTATUS=('')
 
-    ppl_COMAND_COUNTER=0 # сбросить счетчик комманд
+    ppl_COMMAND_COUNTER=0 # сбросить счетчик команд
   else
     # @todo:
-    # если нет команды (ентер в пустой строке|C-c)
+    # если нет команды (<enter> в пустой строке|C-c)
     # @fixme: некрасиво получается
     # printf '\e[2A'
     # #< перед рисованием строки-приглашения сдвинутся вверх 2строки
@@ -143,12 +145,13 @@ function ppl_cb_postcommand {
   fi
 }
 
-function ppl_print_precommand {
+function ppl_print_pre_command {
 
   tput sgr0
   # линия разделитель между командой и ее выводом
-  printf -v fill '%*s' $(tput cols)
-  printf '%s\n\n' "${fill// /-}"
+  printf -v fill '%*s' "$(tput cols)" ""
+  # @fixme: символ перевода строки игнорируется
+  printf '%s%b' "${fill// /-}" "\n"
 }
 
 function get_absolute_path {
@@ -158,38 +161,38 @@ function get_absolute_path {
 }
 
 function ppl_path_abbreviation {
-    # укорачивает путь преданый в $1 до количества
-    # символов переданого в $2
+    # укорачивает путь переданный в $1 до количества
+    # символов переданного в $2
     # Логика работы: @todo
     
     local short_path
 
     # Получаем абсолютный путь
-    local -r abs_path="$(cd ${1} &>/dev/null && pwd)"
+    local -r abs_path="$(cd "${1}" &>/dev/null && pwd)"
 
 
     # 1)
     # Проверяем, является ли путь частью Git-репозитория
     local -r git_root="$(git -C "${abs_path}" rev-parse --show-toplevel 2>/dev/null)"
-    if [[ -n $git_root ]]; then
+    if [[ -n "${git_root}" ]]; then
         # Заменяем часть пути до корневой директории репозитория на '...'
-        short_path="${abs_path/#$git_root/(git)/$(basename $git_root)}"
+        short_path="${abs_path/#$git_root/(git)/$(basename "${git_root}")}"
    
     else
     
       # 2)
-      # если путь одна из подпапок в директории $HOME/storage/external-*
+      # если путь одна из под-папок в директории $HOME/storage/external-*
       if [[ $abs_path == $HOME/storage/external-* || $abs_path == $HOME/storage/shared ]]; then
            # Заменяем $HOME/storage на ...
-          short_path="...${abs_path#$HOME/storage}"
+          short_path="...${abs_path#"${HOME}"/storage}"
         
       else
       
         # 3)
-        # если путь одна из подпапок в директории $HOME/storage
+        # если путь одна из под-папок в директории $HOME/storage
         if [[ $abs_path == $HOME/storage/* ]]; then
              # Заменяем $HOME на ...
-            short_path="...${abs_path#$HOME}"
+            short_path="...${abs_path#"${HOME}"}"
         
         else
         
@@ -197,7 +200,7 @@ function ppl_path_abbreviation {
           # Проверяем, является ли путь частью домашней директории
           if [[ $abs_path == $HOME/* ]]; then
               # Заменяем $HOME на .../home
-              short_path=".../home${abs_path#$HOME}"
+              short_path=".../home${abs_path#"${HOME}"}"
         
           else
               short_path="$1"
@@ -221,7 +224,7 @@ function ppl_path_abbreviation {
 
 
 # выводит путь текущей директории приглашение ввода
-# путь будет сокращен и/или обрезан для того чтобы помещатся
+# путь будет сокращен и/или обрезан для того чтобы помещался
 # в одну строку
 function ppl_print_prompt {
   tput sgr0
@@ -229,6 +232,7 @@ function ppl_print_prompt {
   printf '\n%s:%s ' "$USER" '$'
 }
 
-PROMPT_COMMAND="trap 'ppl_cb_precommand' DEBUG; ppl_cb_postcommand"
-PS0='$(ppl_print_precommand)'
+PROMPT_COMMAND="trap 'ppl_cb_pre_command' DEBUG; ppl_cb_post_command"
+# shellcheck disable=SC2016,SC2034
+PS0='$(ppl_print_pre_command)'
 PS1='$(ppl_print_prompt)'
