@@ -1,17 +1,14 @@
+# Определение исходных файлов и их целевых расположений
+SOURCES := bashrc aliases environment onstart ppl_bash
+TARGETS := $(addprefix $(HOME)/., $(SOURCES))
 
-all: $(HOME)/.bashrc $(HOME)/.aliases $(HOME)/.environment $(HOME)/.onstart $(HOME)/.ppl_bash
+# Путь к инструменту для обработки скриптов
+PPRINT_TOOL := tools/bash-script-pprint
 
-$(HOME)/.bashrc: bashrc
-	tools/bash-script-pprint "$<" > "$@"
-	
-$(HOME)/.aliases: aliases
-	tools/bash-script-pprint "$<" > "$@"
+# Шаблонное правило для обработки скриптов
+$(HOME)/.%: %
+	$(PPRINT_TOOL) "$<" > "$@"
 
-$(HOME)/.environment: environment
-	tools/bash-script-pprint "$<" > "$@"
+all: $(TARGETS)
 
-$(HOME)/.onstart: onstart
-	tools/bash-script-pprint "$<" > "$@"
-
-$(HOME)/.ppl_bash: ppl_bash
-	tools/bash-script-pprint "$<" > "$@"
+.PHONY: all
