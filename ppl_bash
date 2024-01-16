@@ -2,7 +2,6 @@
 ##
 ## Зависимости:
 ## termux-set-title
-## tput
 ##
 ## SECONDS -- системная переменная. man bash /SECONDS
 ## используется для фиксации времени выполнения команд
@@ -16,6 +15,7 @@ declare -a LAST_PIPESTATUS=()
 
 # счётчик команд
 declare -i ppl_COMMAND_COUNTER=0
+
 
 
 # поменять заголовок вкладки
@@ -47,7 +47,7 @@ function ppl_print_status_line {
     status_line+=$'\e[0m' # Сброс цвета
 
     # Рассчитать длину заполнения
-    fill_length=$(( $(tput cols) - ${#timestamp} - status_length - ${#mark} - 4))
+    fill_length=$(( $(stty size | cut -d' ' -f2) - ${#timestamp} - status_length - ${#mark} - 4))
 
     # Создать заполнение
     [[ $fill_length -gt 0 ]] && printf -v fill '%*s' "$fill_length" ""
@@ -142,12 +142,10 @@ function ppl_cb_post_command {
 }
 
 function ppl_print_pre_command {
-
-  tput sgr0
   # линия разделитель между командой и ее выводом
-  printf -v fill '%*s' "$(tput cols)" ""
+  printf -v fill '%*s' "$(stty size | cut -d' ' -f2)" ""
   # @fixme: символ перевода строки игнорируется
-  printf '%s%b' "${fill// /-}" "\n"
+  printf '\E(B\E[m%s%b' "${fill// /-}" "\n"
 }
 
 function get_absolute_path {
@@ -223,8 +221,8 @@ function ppl_path_abbreviation {
 # путь будет сокращен и/или обрезан для того чтобы помещался
 # в одну строку
 function ppl_print_prompt {
-  tput sgr0
-  ppl_path_abbreviation "$(pwd)" $(($(tput col) * 3 / 4))
+  printf '\E(E\E[m'
+  ppl_path_abbreviation "$(pwd)" $(($(stty size | cut -d' ' -f2) * 3 / 4))
   printf '\n%s:%s ' "$USER" '$'
 }
 
