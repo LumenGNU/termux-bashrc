@@ -1,5 +1,6 @@
 # Определение исходных файлов и их целевых расположений
 SOURCES := bashrc aliases environment onstart ppl_bash
+
 TARGETS := $(addprefix $(HOME)/., $(SOURCES))
 
 # Путь к инструменту для обработки скриптов
