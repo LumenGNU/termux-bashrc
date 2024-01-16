@@ -1,11 +1,11 @@
 
 
 
-# задать заголовок вкладки
+# задать заголовок вкладки termux
 alias termux-set-title="printf '\033]0;%s\a'"
 
 # some more ls aliases
 alias ls='ls --hyperlink=auto --color=auto '
-alias ll='ls -alF --group-directories-first --sort=extension -p'
+alias ll='ls -AlF --group-directories-first --sort=extension -p'
 alias la='ls -A'
 alias l='ls -CF'
