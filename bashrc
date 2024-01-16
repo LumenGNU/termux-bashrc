@@ -1,4 +1,4 @@
-
+#!/bin/bash
 
 
 
@@ -15,7 +15,7 @@ then
 
   source /data/data/com.termux/files/home/.aliases
 
-  source /data/data/com.termux/files/home/.ppl_bash
+  [[ "${TERM_PROGRAM}" != "vscode" ]] && source /data/data/com.termux/files/home/.ppl_bash
   
   source /data/data/com.termux/files/home/.onstart
   

@@ -219,7 +219,7 @@ function ppl_path_abbreviation {
 function ppl_print_prompt {
   printf '\1\E(B\E[m\2'
   ppl_path_abbreviation "$(pwd)" $(($(stty size | cut -d' ' -f2) * 3 / 4))
-  printf '\1\n\2%s:%s \1\E[1m\2' "$USER" '$'
+  printf '\n%s:%s \1\E[1m\2' "$USER" '$'
 }
 
 function ppl_print_pre_command {
