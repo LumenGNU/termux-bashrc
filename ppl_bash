@@ -53,7 +53,7 @@ function ppl_print_status_line {
     [[ $fill_length -gt 0 ]] && printf -v fill '%*s' "$fill_length" ""
 
     # Вывести итоговую строку статуса
-    printf -- "\n--%s%s%s%s--\n\n\n" "$timestamp" "${fill// /-}" "$mark" "$status_line"
+    printf -- "\n‾‾%s%s%s%s‾‾\n\n\n" "$timestamp" "${fill// /‾}" "$mark" "$status_line"
 }
 
 ## ppl_cb_pre_command и ppl_cb_post_command: Функции обратного вызова 
@@ -226,7 +226,7 @@ function ppl_print_pre_command {
   # линия разделитель между командой и ее выводом
   printf -v fill '%*s' "$(stty size | cut -d' ' -f2)" ""
   # @fixme: символ перевода строки игнорируется
-  printf '\1\E(B\E[m\2%s\1\n\n\2' "${fill// /-}"
+  printf '\1\E(B\E[m\2%s\n\n' "${fill// /‾}"
 }
 
 PROMPT_COMMAND="trap 'ppl_cb_pre_command' DEBUG; ppl_cb_post_command"
