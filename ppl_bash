@@ -217,16 +217,14 @@ function ppl_path_abbreviation {
 # путь будет сокращен и/или обрезан для того чтобы помещался
 # в одну строку
 function ppl_print_prompt {
-  printf '\1\E(B\E[m\2'
   ppl_path_abbreviation "$(pwd)" $(($(stty size | cut -d' ' -f2) * 3 / 4))
-  printf '\n%s:%s \1\E[1m\2' "$USER" '$'
+  printf '\n%s:%s ' "$USER" '$'
 }
 
 function ppl_print_pre_command {
   # линия разделитель между командой и ее выводом
   printf -v fill '%*s' "$(stty size | cut -d' ' -f2)" ""
-  # @fixme: символ перевода строки игнорируется
-  printf '\1\E(B\E[m\2%s\n\n' "${fill// /‾}"
+  printf '%s' "${fill// /‾}"
 }
 
 PROMPT_COMMAND="trap 'ppl_cb_pre_command' DEBUG; ppl_cb_post_command"
