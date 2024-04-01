@@ -106,7 +106,7 @@ function ppl_cb_pre_command {
   fi
   
   # поменять заголовок окна на текущую команду
-  termux-set-title "[${USER}@${HOSTNAME}]> ${BASH_COMMAND}"
+  termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${HOSTNAME}]> ${BASH_COMMAND}"
 
   # обнулить счетчик времени перед выполнением первой команды
   # из цепочки команд из ком. строки
@@ -124,7 +124,7 @@ function ppl_cb_pre_command {
 function ppl_cb_post_command {
 
   # сбросить заголовок вкладки
-  termux-set-title "[${USER}@${HOSTNAME}]"
+  termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${HOSTNAME}]"
 
   if ((ppl_COMMAND_COUNTER > 0)); then
 
@@ -228,7 +228,7 @@ function ppl_path_abbreviation {
         short_path="${start}...${end}"
     fi
 
-    printf '%s' "$short_path"
+    printf '%s%s' "${SSH_CONNECTION+SSH:}" "$short_path"
 }
 
 
