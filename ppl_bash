@@ -237,7 +237,7 @@ function ppl_path_abbreviation {
 # в одну строку
 function ppl_print_prompt {
   
-  ppl_path_abbreviation "$(pwd)" $(($(stty size | cut -d' ' -f2) * 3 / 4))
+  ppl_path_abbreviation "${SSH_CONNECTION+SSH:}$(pwd)" $(($(stty size | cut -d' ' -f2) * 3 / 4))
   printf '\n%s:%s ' "$USER" '$'
 }
 
