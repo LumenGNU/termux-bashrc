@@ -20,8 +20,11 @@ cat "${HOME}/.termux/colors_default.properties" > "${HOME}/.termux/colors.proper
 termux-reload-settings
 declare -i AFTER_SU_FLAG=0
 
+declare _HOSTNAME=
 # поменять заголовок вкладки
-#termux-set-title "[${USER}@${HOSTNAME}]"
+#termux-set-title "[${USER}@${_HOSTNAME}]"
+
+
 
 
 function ppl_print_status_line {
@@ -106,7 +109,7 @@ function ppl_cb_pre_command {
   fi
   
   # поменять заголовок окна на текущую команду
-  termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${HOSTNAME}]> ${BASH_COMMAND}"
+  termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${_HOSTNAME}]> ${BASH_COMMAND}"
 
   # обнулить счетчик времени перед выполнением первой команды
   # из цепочки команд из ком. строки
@@ -124,7 +127,7 @@ function ppl_cb_pre_command {
 function ppl_cb_post_command {
 
   # сбросить заголовок вкладки
-  termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${HOSTNAME}]"
+  termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${_HOSTNAME}]"
 
   if ((ppl_COMMAND_COUNTER > 0)); then
 
@@ -236,15 +239,21 @@ function ppl_path_abbreviation {
 # путь будет сокращен и/или обрезан для того чтобы помещался
 # в одну строку
 function ppl_print_prompt {
+
+    if [[ -n "${SSH_CONNECTION}" ]]; then
+        _HOSTNAME=$(echo "${SSH_CONNECTION}" | cut -d' ' -f3)
+    else
+        _HOSTNAME="${HOSTNAME}"
+    fi
   
-  ppl_path_abbreviation "$(pwd)" $(($(stty size | cut -d' ' -f2) * 3 / 4))
-  printf '\n%s:%s ' "$USER" '$'
+    ppl_path_abbreviation "$(pwd)" $(($(stty size | cut -d' ' -f2) * 3 / 4))
+    printf '\n%s:%s ' "$USER" '$'
 }
 
 function ppl_print_pre_command {
-  # линия разделитель между командой и ее выводом
-  printf -v fill '%*s' "$(stty size | cut -d' ' -f2)" ""
-  printf '%s' "${fill// /‾}"
+    # линия разделитель между командой и ее выводом
+    printf -v fill '%*s' "$(stty size | cut -d' ' -f2)" ""
+    printf '%s' "${fill// /‾}"
 }
 
 PROMPT_COMMAND="trap 'ppl_cb_pre_command' DEBUG; ppl_cb_post_command"
