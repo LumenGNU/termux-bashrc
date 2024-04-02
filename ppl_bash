@@ -20,7 +20,7 @@ declare -i ppl_COMMAND_COUNTER=0
 # termux-reload-settings
 # declare -i AFTER_SU_FLAG=0
 
-declare _HOSTNAME=
+declare _HOSTNAME=''
 # поменять заголовок вкладки
 #termux-set-title "[${USER}@${__HOSTNAME}]"
 
