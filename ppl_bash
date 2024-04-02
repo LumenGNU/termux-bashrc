@@ -9,7 +9,6 @@
 # избавляемся от ошибок если termux-set-title не установлен
 type termux-set-title &>/dev/null || alias termux-set-title=':'
 
-
 # хранит кода завершений последней цепочки команд
 declare -a LAST_PIPESTATUS=()
 
@@ -20,14 +19,8 @@ declare -i ppl_COMMAND_COUNTER=0
 # termux-reload-settings
 # declare -i AFTER_SU_FLAG=0
 
-
 # поменять заголовок вкладки
 #termux-set-title "[${USER}@${__HOSTNAME}]"
-
-
-
-
-
 
 function ppl_print_status_line {
     local -ri seconds=${1:-0}
@@ -39,22 +32,22 @@ function ppl_print_status_line {
     local fill=''
 
     # Создать временную метку, если SECONDS > 5
-    if ((seconds > 5 )); then
-        printf -v timestamp ' [%02d:%02d:%02d] ' $((seconds/3600)) $(((seconds%3600)/60)) $((seconds%60))
+    if ((seconds > 5)); then
+        printf -v timestamp ' [%02d:%02d:%02d] ' $((seconds / 3600)) $(((seconds % 3600) / 60)) $((seconds % 60))
     fi
 
     local -i status_length=1
     # Формирование строки статусов
     for status in "${statuses[@]}"; do
-        local color=$'\e[32m' # Зеленый для 0
-        (( status > 0 )) && color=$'\e[31m' # Красный для ненулевых
+        local color=$'\e[32m'             # Зеленый для 0
+        ((status > 0)) && color=$'\e[31m' # Красный для ненулевых
         printf -v status_line '%s%s%s ' "$status_line" "$color" "$status"
         ((status_length += ${#status} + 1))
     done
     status_line+=$'\e[0m' # Сброс цвета
 
     # Рассчитать длину заполнения
-    fill_length=$(( $(stty size | cut -d' ' -f2) - ${#timestamp} - status_length - ${#mark} - 4))
+    fill_length=$(($(stty size | cut -d' ' -f2) - ${#timestamp} - status_length - ${#mark} - 4))
 
     # Создать заполнение
     [[ $fill_length -gt 0 ]] && printf -v fill '%*s' "$fill_length" ""
@@ -63,7 +56,7 @@ function ppl_print_status_line {
     printf -- "\n‾‾%s%s%s%s‾‾\n\n\n" "$timestamp" "${fill// /‾}" "$mark" "$status_line"
 }
 
-## ppl_cb_pre_command и ppl_cb_post_command: Функции обратного вызова 
+## ppl_cb_pre_command и ppl_cb_post_command: Функции обратного вызова
 ## (callback), вызываемые перед и после выполнения команд соответственно.
 
 # Вызывается перед выполнением каждой команды в списке/цепочке
@@ -76,56 +69,54 @@ function ppl_print_status_line {
 #
 # Перед выполнением "trap 'ppl_cb_pre_command' DEBUG", т.е.
 # после выполнения всех команд из цепочки в командной строке,
-# глобальная переменная LAST_PIPESTATUS будет содержать 
+# глобальная переменная LAST_PIPESTATUS будет содержать
 # кода завершения команд из цепочки команд в ком. строке.
 #
 # TODO: какое поведение для пустой команды (<enter> в пустой
 # строке, или C-c)? Какое поведение для C-z?
 function ppl_cb_pre_command {
-  
-  # сохранить коды завершений выполненных команд в локальную
-  # переменную
-  local -ar _LAST_PIPESTATUS=("${PIPESTATUS[@]}") # всегда первой строкой в pll_cb_pre_command
 
-  trap - DEBUG # @todo: может и не нада, но и не мешает
-
-  [[ "${BASH_COMMAND}" == "trap 'ppl_cb_pre_command' DEBUG" ]] && {
-    # все команды выполнены
-    # скопировать кода завершения команд в глобальную
+    # сохранить коды завершений выполненных команд в локальную
     # переменную
-    LAST_PIPESTATUS=("${_LAST_PIPESTATUS[@]}") #запомнить коды завершений
-    # и больше ничего не делать
-    return
-  }
+    local -ar _LAST_PIPESTATUS=("${PIPESTATUS[@]}") # всегда первой строкой в pll_cb_pre_command
 
-  # игнорировать, ничего не делать
-  [[ "${BASH_COMMAND}" == "ppl_cb_post_command" ]] && return
-  
-  
-#   if [[ "${BASH_COMMAND}" =~ (su|tsu) ]]
-#   then
-#     # echo "-- in su mode --"
-#     cat "${HOME}/.termux/colors_su.properties" > "${HOME}/.termux/colors.properties"
-#     termux-reload-settings
-#     AFTER_SU_FLAG=1
-#   fi
-  
-  # поменять заголовок окна на текущую команду
-  if [[ -n "${SSH_CONNECTION}" ]]; then
+    trap - DEBUG # @todo: может и не нада, но и не мешает
+
+    [[ "${BASH_COMMAND}" == "trap 'ppl_cb_pre_command' DEBUG" ]] && {
+        # все команды выполнены
+        # скопировать кода завершения команд в глобальную
+        # переменную
+        LAST_PIPESTATUS=("${_LAST_PIPESTATUS[@]}") #запомнить коды завершений
+        # и больше ничего не делать
+        return
+    }
+
+    # игнорировать, ничего не делать
+    [[ "${BASH_COMMAND}" == "ppl_cb_post_command" ]] && return
+
+    #   if [[ "${BASH_COMMAND}" =~ (su|tsu) ]]
+    #   then
+    #     # echo "-- in su mode --"
+    #     cat "${HOME}/.termux/colors_su.properties" > "${HOME}/.termux/colors.properties"
+    #     termux-reload-settings
+    #     AFTER_SU_FLAG=1
+    #   fi
+
+    # поменять заголовок окна на текущую команду
+    if [[ -n "${SSH_CONNECTION}" ]]; then
         _HOSTNAME=$(echo "${SSH_CONNECTION}" | cut -d' ' -f3)
     else
         _HOSTNAME="${HOSTNAME}"
     fi
-  termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${_HOSTNAME}]: ${BASH_COMMAND}"
+    termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${_HOSTNAME}]: ${BASH_COMMAND}"
 
-  # обнулить счетчик времени перед выполнением первой команды
-  # из цепочки команд из ком. строки
-  ((ppl_COMMAND_COUNTER == 0)) && SECONDS=0
+    # обнулить счетчик времени перед выполнением первой команды
+    # из цепочки команд из ком. строки
+    ((ppl_COMMAND_COUNTER == 0)) && SECONDS=0
 
-  # подсчет команд
-  ((++ppl_COMMAND_COUNTER))
+    # подсчет команд
+    ((++ppl_COMMAND_COUNTER))
 }
-
 
 # Выполняется после выполнения всех команд в списке/цепочке
 # команд введенных в ком. строку.
@@ -133,43 +124,41 @@ function ppl_cb_pre_command {
 #                                   ppl_COMMAND_COUNTER
 function ppl_cb_post_command {
 
+    if ((ppl_COMMAND_COUNTER > 0)); then
 
+        # PIPESTATUS - содержит коды завершения только последнего конвейера,
+        # если выполнено несколько конвейеров нужно проинформировать пользователя.
+        # Если использовать операторы для соединения нескольких команд в
+        # одной строке, ppl_COMMAND_COUNTER будет увеличиваться на каждую
+        # команду, но LAST_PIPESTATUS будет содержать статусы только
+        # последней выполненной цепочки команд. Например,
+        # command1; command2 увеличит счетчик на два,
+        # но LAST_PIPESTATUS будет содержать статусы только для
+        # command2. В такой и подобной ситуации перед кодами завершения
+        # будет вставлен маркер, показывающий что часть кодов пропущена.
+        local _mark=''
+        ((ppl_COMMAND_COUNTER > ${#LAST_PIPESTATUS[@]})) && _mark='…'
 
-  if ((ppl_COMMAND_COUNTER > 0)); then
+        # if (( AFTER_SU_FLAG == 1 ))
+        # then
+        #   cat "${HOME}/.termux/colors_default.properties" > "${HOME}/.termux/colors.properties"
+        #   termux-reload-settings
+        #   AFTER_SU_FLAG=0
+        # fi
 
-    # PIPESTATUS - содержит коды завершения только последнего конвейера,
-    # если выполнено несколько конвейеров нужно проинформировать пользователя.
-    # Если использовать операторы для соединения нескольких команд в
-    # одной строке, ppl_COMMAND_COUNTER будет увеличиваться на каждую 
-    # команду, но LAST_PIPESTATUS будет содержать статусы только
-    # последней выполненной цепочки команд. Например, 
-    # command1; command2 увеличит счетчик на два, 
-    # но LAST_PIPESTATUS будет содержать статусы только для 
-    # command2. В такой и подобной ситуации перед кодами завершения
-    # будет вставлен маркер, показывающий что часть кодов пропущена.
-    local _mark=''
-    ((ppl_COMMAND_COUNTER > ${#LAST_PIPESTATUS[@]})) &&  _mark='…'
+        echo -ne '\033[0m'
+        ppl_print_status_line "${SECONDS}" "${_mark}" "${LAST_PIPESTATUS[@]}" #< вывод строки-статуса
 
-    # if (( AFTER_SU_FLAG == 1 ))
-    # then
-    #   cat "${HOME}/.termux/colors_default.properties" > "${HOME}/.termux/colors.properties"
-    #   termux-reload-settings
-    #   AFTER_SU_FLAG=0
-    # fi
-
-    echo -ne '\033[0m'
-    ppl_print_status_line "${SECONDS}" "${_mark}" "${LAST_PIPESTATUS[@]}" #< вывод строки-статуса
-
-    ppl_COMMAND_COUNTER=0 # сбросить счетчик команд
-  else
-    # @todo:
-    # если нет команды (<enter> в пустой строке|C-c)
-    # @fixme: некрасиво получается
-    # printf '\e[2A'
-    # #< перед рисованием строки-приглашения сдвинутся вверх 2строки
-    # printf '\e[0J'
-    :
-  fi
+        ppl_COMMAND_COUNTER=0 # сбросить счетчик команд
+    else
+        # @todo:
+        # если нет команды (<enter> в пустой строке|C-c)
+        # @fixme: некрасиво получается
+        # printf '\e[2A'
+        # #< перед рисованием строки-приглашения сдвинутся вверх 2строки
+        # printf '\e[0J'
+        :
+    fi
 }
 
 # function get_absolute_path {
@@ -182,12 +171,11 @@ function ppl_path_abbreviation {
     # укорачивает путь переданный в $1 до количества
     # символов переданного в $2
     # Логика работы: @todo
-    
+
     local short_path
 
     # Получаем абсолютный путь
     local -r abs_path="$(cd "${1}" &>/dev/null && pwd)"
-
 
     # 1)
     # Проверяем, является ли путь частью Git-репозитория
@@ -195,43 +183,43 @@ function ppl_path_abbreviation {
     if [[ -n "${git_root}" ]]; then
         # Заменяем часть пути до корневой директории репозитория на '...'
         short_path="${abs_path/#$git_root/(git)/$(basename "${git_root}")}"
-   
+
     else
-    
-      # 2)
-      # если путь одна из под-папок в директории $HOME/storage/external-*
-      if [[ $abs_path == $HOME/storage/external-* || $abs_path == $HOME/storage/shared ]]; then
-           # Заменяем $HOME/storage на ...
-          short_path="...${abs_path#"${HOME}"/storage}"
-        
-      else
-      
-        # 3)
-        # если путь одна из под-папок в директории $HOME/storage
-        if [[ $abs_path == $HOME/storage/* ]]; then
-             # Заменяем $HOME на ...
-            short_path="...${abs_path#"${HOME}"}"
-        
+
+        # 2)
+        # если путь одна из под-папок в директории $HOME/storage/external-*
+        if [[ $abs_path == $HOME/storage/external-* || $abs_path == $HOME/storage/shared ]]; then
+            # Заменяем $HOME/storage на ...
+            short_path="...${abs_path#"${HOME}"/storage}"
+
         else
-        
-          # 4)
-          # Проверяем, является ли путь частью домашней директории
-          if [[ $abs_path == $HOME/* ]]; then
-              # Заменяем $HOME на .../home
-              short_path=".../home${abs_path#"${HOME}"}"
-        
-          else
-              short_path="$1"
-          fi
+
+            # 3)
+            # если путь одна из под-папок в директории $HOME/storage
+            if [[ $abs_path == $HOME/storage/* ]]; then
+                # Заменяем $HOME на ...
+                short_path="...${abs_path#"${HOME}"}"
+
+            else
+
+                # 4)
+                # Проверяем, является ли путь частью домашней директории
+                if [[ $abs_path == $HOME/* ]]; then
+                    # Заменяем $HOME на .../home
+                    short_path=".../home${abs_path#"${HOME}"}"
+
+                else
+                    short_path="$1"
+                fi
+            fi
         fi
-      fi
     fi
-    
+
     # 5)
     local -r path_length=${#short_path}
     # Если путь длиннее максимально допустимой длины, сокращаем его
     if ((path_length > $2)); then
-        local -r part_length=$(( ($2 - 3) / 2 )) # Длина каждой части пути до и после эллипсиса
+        local -r part_length=$((($2 - 3) / 2)) # Длина каждой части пути до и после эллипсиса
         local -r start=${short_path:0:part_length}
         local -r end=${short_path: -part_length}
         short_path="${start}...${end}"
@@ -239,7 +227,6 @@ function ppl_path_abbreviation {
 
     printf '%s%s' "${SSH_CONNECTION+SSH:}" "$short_path"
 }
-
 
 # выводит путь текущей директории приглашение ввода
 # путь будет сокращен и/или обрезан для того чтобы помещался
@@ -254,7 +241,7 @@ function ppl_print_prompt {
 
     # сбросить заголовок вкладки
     termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${_HOSTNAME}]"
-  
+
     ppl_path_abbreviation "$(pwd)" $(($(stty size | cut -d' ' -f2) * 3 / 4))
     printf '\n%s:%s ' "$USER" '$'
 }
