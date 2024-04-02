@@ -22,7 +22,9 @@ declare -i AFTER_SU_FLAG=0
 
 declare _HOSTNAME=
 # поменять заголовок вкладки
-#termux-set-title "[${USER}@${_HOSTNAME}]"
+#termux-set-title "[${USER}@${__HOSTNAME}]"
+
+
 
 
 
@@ -110,6 +112,7 @@ function ppl_cb_pre_command {
   
   # поменять заголовок окна на текущую команду
   termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${_HOSTNAME}]> ${BASH_COMMAND}"
+  termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${_HOSTNAME}]> ${BASH_COMMAND}"
 
   # обнулить счетчик времени перед выполнением первой команды
   # из цепочки команд из ком. строки
@@ -127,6 +130,7 @@ function ppl_cb_pre_command {
 function ppl_cb_post_command {
 
   # сбросить заголовок вкладки
+  termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${_HOSTNAME}]"
   termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${_HOSTNAME}]"
 
   if ((ppl_COMMAND_COUNTER > 0)); then
@@ -168,7 +172,7 @@ function ppl_cb_post_command {
 
 # function get_absolute_path {
 #     # Используем подоболочку для получения абсолютного пути
-#     # Изменения рабочего каталога в подоболочке не повлияют на родительскую оболочку
+#     # Изменения рабочего каталога в подоболочке не_HOSTNAME повлияют на родительскую оболочку
 #     printf '%s' "$(cd "${1}" &>/dev/null && pwd)"
 # }
 
