@@ -16,9 +16,9 @@ declare -a LAST_PIPESTATUS=()
 # счётчик команд
 declare -i ppl_COMMAND_COUNTER=0
 
-cat "${HOME}/.termux/colors_default.properties" > "${HOME}/.termux/colors.properties"
-termux-reload-settings
-declare -i AFTER_SU_FLAG=0
+# cat "${HOME}/.termux/colors_default.properties" > "${HOME}/.termux/colors.properties"
+# termux-reload-settings
+# declare -i AFTER_SU_FLAG=0
 
 declare _HOSTNAME=
 # поменять заголовок вкладки
@@ -102,16 +102,15 @@ function ppl_cb_pre_command {
   [[ "${BASH_COMMAND}" == "ppl_cb_post_command" ]] && return
   
   
-  if [[ "${BASH_COMMAND}" =~ (su|tsu) ]]
-  then
-    # echo "-- in su mode --"
-    cat "${HOME}/.termux/colors_su.properties" > "${HOME}/.termux/colors.properties"
-    termux-reload-settings
-    AFTER_SU_FLAG=1
-  fi
+#   if [[ "${BASH_COMMAND}" =~ (su|tsu) ]]
+#   then
+#     # echo "-- in su mode --"
+#     cat "${HOME}/.termux/colors_su.properties" > "${HOME}/.termux/colors.properties"
+#     termux-reload-settings
+#     AFTER_SU_FLAG=1
+#   fi
   
   # поменять заголовок окна на текущую команду
-  termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${_HOSTNAME}]> ${BASH_COMMAND}"
   termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${_HOSTNAME}]> ${BASH_COMMAND}"
 
   # обнулить счетчик времени перед выполнением первой команды
@@ -148,12 +147,12 @@ function ppl_cb_post_command {
     local _mark=''
     ((ppl_COMMAND_COUNTER > ${#LAST_PIPESTATUS[@]})) &&  _mark='…'
 
-    if (( AFTER_SU_FLAG == 1 ))
-    then
-      cat "${HOME}/.termux/colors_default.properties" > "${HOME}/.termux/colors.properties"
-      termux-reload-settings
-      AFTER_SU_FLAG=0
-    fi
+    # if (( AFTER_SU_FLAG == 1 ))
+    # then
+    #   cat "${HOME}/.termux/colors_default.properties" > "${HOME}/.termux/colors.properties"
+    #   termux-reload-settings
+    #   AFTER_SU_FLAG=0
+    # fi
 
     echo -ne '\033[0m'
     ppl_print_status_line "${SECONDS}" "${_mark}" "${LAST_PIPESTATUS[@]}" #< вывод строки-статуса
@@ -246,6 +245,7 @@ function ppl_print_prompt {
 
     if [[ -n "${SSH_CONNECTION}" ]]; then
         _HOSTNAME=$(echo "${SSH_CONNECTION}" | cut -d' ' -f3)
+    echo "${_HOSTNAME}"
     else
         _HOSTNAME="${HOSTNAME}"
     fi
