@@ -20,7 +20,7 @@ declare -i ppl_COMMAND_COUNTER=0
 # termux-reload-settings
 # declare -i AFTER_SU_FLAG=0
 
-declare _HOSTNAME=''
+
 # поменять заголовок вкладки
 #termux-set-title "[${USER}@${__HOSTNAME}]"
 
@@ -111,7 +111,12 @@ function ppl_cb_pre_command {
 #   fi
   
   # поменять заголовок окна на текущую команду
-  termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${_HOSTNAME}]> ${BASH_COMMAND}"
+  if [[ -n "${SSH_CONNECTION}" ]]; then
+        _HOSTNAME=$(echo "${SSH_CONNECTION}" | cut -d' ' -f3)
+    else
+        _HOSTNAME="${HOSTNAME}"
+    fi
+  termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${_HOSTNAME}]: ${BASH_COMMAND}"
 
   # обнулить счетчик времени перед выполнением первой команды
   # из цепочки команд из ком. строки
@@ -247,8 +252,8 @@ function ppl_print_prompt {
         _HOSTNAME="${HOSTNAME}"
     fi
 
-      # сбросить заголовок вкладки
-  termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${_HOSTNAME}]"
+    # сбросить заголовок вкладки
+    termux-set-title "${SSH_CONNECTION+SSH:}[${USER}@${_HOSTNAME}]"
   
     ppl_path_abbreviation "$(pwd)" $(($(stty size | cut -d' ' -f2) * 3 / 4))
     printf '\n%s:%s ' "$USER" '$'
