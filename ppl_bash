@@ -244,6 +244,7 @@ function ppl_path_abbreviation {
 function ppl_print_prompt {
 
     if [[ -n "${SSH_CONNECTION}" ]]; then
+    echo "${SSH_CONNECTION}"
         _HOSTNAME=$(echo "${SSH_CONNECTION}" | cut -d' ' -f3)
     echo "${_HOSTNAME}"
     else
